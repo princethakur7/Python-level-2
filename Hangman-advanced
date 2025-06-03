@@ -1,0 +1,426 @@
+import random
+import os
+import json
+from datetime import datetime
+
+
+class HangmanGame:
+    """
+    Advanced Hangman Game with multiple features:
+    - Multiple difficulty levels
+    - Score tracking
+    - Hint system
+    - Categories
+    - Game statistics
+    - Save/Load functionality
+    """
+
+    def __init__(self):
+        # Game configuration
+        self.max_wrong_guesses = 6
+        self.score = 0
+        self.games_played = 0
+        self.games_won = 0
+
+        # Current game state
+        self.word = ""
+        self.guessed_letters = set()
+        self.wrong_guesses = 0
+        self.hints_used = 0
+        self.category = ""
+
+        # Word lists organized by category and difficulty
+        self.word_lists = {
+            "animals": {
+                "easy": ["cat", "dog", "fish", "bird", "cow", "pig", "bee"],
+                "medium": ["elephant", "tiger", "dolphin", "penguin", "rabbit", "monkey"],
+                "hard": ["rhinoceros", "hippopotamus", "chimpanzee", "crocodile", "butterfly"]
+            },
+            "countries": {
+                "easy": ["usa", "uk", "japan", "china", "india", "italy"],
+                "medium": ["germany", "australia", "canada", "brazil", "france"],
+                "hard": ["switzerland", "netherlands", "afghanistan", "uzbekistan"]
+            },
+            "food": {
+                "easy": ["pizza", "bread", "apple", "cake", "rice", "soup"],
+                "medium": ["sandwich", "chocolate", "hamburger", "spaghetti"],
+                "hard": ["quesadilla", "bruschetta", "cappuccino", "guacamole"]
+            },
+            "technology": {
+                "easy": ["phone", "laptop", "mouse", "screen", "wifi"],
+                "medium": ["computer", "software", "internet", "database"],
+                "hard": ["algorithm", "encryption", "programming", "cybersecurity"]
+            }
+        }
+
+        # Hangman ASCII art stages
+        self.hangman_stages = [
+            """
+               -----
+               |   |
+                   |
+                   |
+                   |
+                   |
+            =========
+            """,
+            """
+               -----
+               |   |
+               O   |
+                   |
+                   |
+                   |
+            =========
+            """,
+            """
+               -----
+               |   |
+               O   |
+               |   |
+                   |
+                   |
+            =========
+            """,
+            """
+               -----
+               |   |
+               O   |
+              /|   |
+                   |
+                   |
+            =========
+            """,
+            """
+               -----
+               |   |
+               O   |
+              /|\\  |
+                   |
+                   |
+            =========
+            """,
+            """
+               -----
+               |   |
+               O   |
+              /|\\  |
+              /    |
+                   |
+            =========
+            """,
+            """
+               -----
+               |   |
+               O   |
+              /|\\  |
+              / \\  |
+                   |
+            =========
+            """
+        ]
+
+    def clear_screen(self):
+        """Clear the console screen for better user experience"""
+        os.system('cls' if os.name == 'nt' else 'clear')
+
+    def display_welcome(self):
+        """Display welcome message and game rules"""
+        print("=" * 50)
+        print("🎮 WELCOME TO ADVANCED HANGMAN GAME! 🎮")
+        print("=" * 50)
+        print("\n📋 GAME RULES:")
+        print("• Guess the hidden word letter by letter")
+        print("• You have 6 wrong guesses before losing")
+        print("• Use hints wisely (they cost points)")
+        print("• Score points for winning games")
+        print("• Track your statistics")
+        print("\n💡 COMMANDS:")
+        print("• Type a letter to guess")
+        print("• Type 'hint' for a hint (costs 10 points)")
+        print("• Type 'quit' to exit the game")
+        print("• Type 'stats' to view statistics")
+
+    def select_difficulty(self):
+        """Allow player to select difficulty level"""
+        print("\n🎯 SELECT DIFFICULTY LEVEL:")
+        print("1. Easy (3-5 letters)")
+        print("2. Medium (6-8 letters)")
+        print("3. Hard (9+ letters)")
+
+        while True:
+            choice = input("\nEnter your choice (1-3): ").strip()
+            if choice == "1":
+                return "easy"
+            elif choice == "2":
+                return "medium"
+            elif choice == "3":
+                return "hard"
+            else:
+                print("❌ Invalid choice! Please enter 1, 2, or 3.")
+
+    def select_category(self):
+        """Allow player to select word category"""
+        print("\n📚 SELECT CATEGORY:")
+        categories = list(self.word_lists.keys())
+        for i, category in enumerate(categories, 1):
+            print(f"{i}. {category.title()}")
+        print(f"{len(categories) + 1}. Random (any category)")
+
+        while True:
+            try:
+                choice = int(input(f"\nEnter your choice (1-{len(categories) + 1}): "))
+                if 1 <= choice <= len(categories):
+                    return categories[choice - 1]
+                elif choice == len(categories) + 1:
+                    return random.choice(categories)
+                else:
+                    print(f"❌ Invalid choice! Please enter 1-{len(categories) + 1}.")
+            except ValueError:
+                print("❌ Please enter a valid number!")
+
+    def select_word(self, category, difficulty):
+        """Select a random word from the specified category and difficulty"""
+        word_list = self.word_lists[category][difficulty]
+        return random.choice(word_list).upper()
+
+    def display_game_state(self):
+        """Display current game state including hangman, word progress, and guesses"""
+        self.clear_screen()
+
+        # Display hangman
+        print(self.hangman_stages[self.wrong_guesses])
+
+        # Display game info
+        print(f"📂 Category: {self.category.title()}")
+        print(f"💯 Score: {self.score}")
+        print(f"❌ Wrong guesses: {self.wrong_guesses}/{self.max_wrong_guesses}")
+        print(f"💡 Hints used: {self.hints_used}")
+
+        # Display word progress
+        word_display = ""
+        for letter in self.word:
+            if letter in self.guessed_letters:
+                word_display += letter + " "
+            else:
+                word_display += "_ "
+
+        print(f"\n🔤 Word: {word_display}")
+        print(f"Length: {len(self.word)} letters")
+
+        # Display guessed letters
+        if self.guessed_letters:
+            sorted_guesses = sorted(list(self.guessed_letters))
+            print(f"🔤 Guessed letters: {', '.join(sorted_guesses)}")
+
+    def get_hint(self):
+        """Provide a hint by revealing a random unguessed letter"""
+        if self.score < 10:
+            print("❌ Not enough points for a hint! (Need 10 points)")
+            return False
+
+        unguessed_letters = [letter for letter in self.word if letter not in self.guessed_letters]
+
+        if not unguessed_letters:
+            print("❌ No more letters to reveal!")
+            return False
+
+        hint_letter = random.choice(unguessed_letters)
+        self.guessed_letters.add(hint_letter)
+        self.score -= 10
+        self.hints_used += 1
+
+        print(f"💡 Hint: The letter '{hint_letter}' is in the word!")
+        input("Press Enter to continue...")
+        return True
+
+    def is_word_guessed(self):
+        """Check if the entire word has been guessed"""
+        return all(letter in self.guessed_letters for letter in self.word)
+
+    def calculate_score(self):
+        """Calculate score based on word length, difficulty, and hints used"""
+        base_score = len(self.word) * 10
+        difficulty_bonus = {"easy": 0, "medium": 20, "hard": 50}
+
+        # Get difficulty level for current word
+        current_difficulty = "easy"
+        for category, difficulties in self.word_lists.items():
+            for diff, words in difficulties.items():
+                if self.word.lower() in words:
+                    current_difficulty = diff
+                    break
+
+        total_score = base_score + difficulty_bonus[current_difficulty]
+
+        # Penalty for hints
+        hint_penalty = self.hints_used * 10
+
+        return max(0, total_score - hint_penalty)
+
+    def display_statistics(self):
+        """Display game statistics"""
+        print("\n📊 GAME STATISTICS:")
+        print("=" * 30)
+        print(f"Games Played: {self.games_played}")
+        print(f"Games Won: {self.games_won}")
+        if self.games_played > 0:
+            win_rate = (self.games_won / self.games_played) * 100
+            print(f"Win Rate: {win_rate:.1f}%")
+        print(f"Total Score: {self.score}")
+        input("\nPress Enter to continue...")
+
+    def save_game_data(self):
+        """Save game statistics to a file"""
+        try:
+            game_data = {
+                "score": self.score,
+                "games_played": self.games_played,
+                "games_won": self.games_won,
+                "last_played": datetime.now().isoformat()
+            }
+
+            with open("hangman_stats.json", "w") as f:
+                json.dump(game_data, f, indent=2)
+
+        except Exception as e:
+            print(f"⚠️ Could not save game data: {e}")
+
+    def load_game_data(self):
+        """Load game statistics from file"""
+        try:
+            with open("hangman_stats.json", "r") as f:
+                game_data = json.load(f)
+
+            self.score = game_data.get("score", 0)
+            self.games_played = game_data.get("games_played", 0)
+            self.games_won = game_data.get("games_won", 0)
+
+            print(f"✅ Game data loaded! Welcome back!")
+
+        except FileNotFoundError:
+            print("🆕 Starting fresh! No previous game data found.")
+        except Exception as e:
+            print(f"⚠️ Could not load game data: {e}")
+
+    def play_round(self):
+        """Play a single round of hangman"""
+        # Reset round-specific variables
+        self.guessed_letters = set()
+        self.wrong_guesses = 0
+        self.hints_used = 0
+
+        # Select difficulty and category
+        difficulty = self.select_difficulty()
+        self.category = self.select_category()
+
+        # Select word
+        self.word = self.select_word(self.category, difficulty)
+
+        print(f"\n🎯 Great! You're playing {difficulty} level {self.category} words!")
+        input("Press Enter to start the game...")
+
+        # Main game loop
+        while self.wrong_guesses < self.max_wrong_guesses and not self.is_word_guessed():
+            self.display_game_state()
+
+            # Get user input
+            user_input = input("\n🎮 Enter a letter, 'hint', 'stats', or 'quit': ").strip().lower()
+
+            # Handle special commands
+            if user_input == "quit":
+                print("👋 Thanks for playing! Goodbye!")
+                return False
+            elif user_input == "hint":
+                self.get_hint()
+                continue
+            elif user_input == "stats":
+                self.display_statistics()
+                continue
+
+            # Validate input
+            if len(user_input) != 1 or not user_input.isalpha():
+                print("❌ Please enter a single letter!")
+                input("Press Enter to continue...")
+                continue
+
+            letter = user_input.upper()
+
+            # Check if letter already guessed
+            if letter in self.guessed_letters:
+                print(f"❌ You already guessed '{letter}'!")
+                input("Press Enter to continue...")
+                continue
+
+            # Process the guess
+            self.guessed_letters.add(letter)
+
+            if letter in self.word:
+                print(f"✅ Great! '{letter}' is in the word!")
+                if self.is_word_guessed():
+                    break
+            else:
+                self.wrong_guesses += 1
+                print(f"❌ Sorry! '{letter}' is not in the word.")
+
+            input("Press Enter to continue...")
+
+        # End of round
+        self.display_game_state()
+        self.games_played += 1
+
+        if self.is_word_guessed():
+            # Player won
+            round_score = self.calculate_score()
+            self.score += round_score
+            self.games_won += 1
+
+            print(f"\n🎉 CONGRATULATIONS! You won!")
+            print(f"The word was: {self.word}")
+            print(f"You earned {round_score} points!")
+            print(f"Hints used: {self.hints_used}")
+        else:
+            # Player lost
+            print(f"\n💀 GAME OVER!")
+            print(f"The word was: {self.word}")
+
+        return True
+
+    def play(self):
+        """Main game function"""
+        self.display_welcome()
+        self.load_game_data()
+
+        while True:
+            if not self.play_round():
+                break
+
+            # Ask if player wants to continue
+            while True:
+                play_again = input("\n🔄 Do you want to play again? (y/n): ").strip().lower()
+                if play_again in ['y', 'yes']:
+                    break
+                elif play_again in ['n', 'no']:
+                    print("👋 Thanks for playing! Final statistics:")
+                    self.display_statistics()
+                    self.save_game_data()
+                    return
+                else:
+                    print("❌ Please enter 'y' for yes or 'n' for no.")
+
+
+def main():
+    """Main function to start the game"""
+    try:
+        game = HangmanGame()
+        game.play()
+    except KeyboardInterrupt:
+        print("\n\n👋 Game interrupted. Thanks for playing!")
+    except Exception as e:
+        print(f"\n❌ An error occurred: {e}")
+        print("Please restart the game.")
+
+
+# Run the game
+if __name__ == "__main__":
+    main()
