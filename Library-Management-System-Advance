@@ -1,399 +1,533 @@
-# Library Management System using Arrays
-# A simple yet comprehensive system to manage books without OOP
+import datetime
+from typing import List, Dict, Optional, Tuple
+import bisect
 
-# Global arrays to store library data
-books = []          # Main array to store all book records
-issued_books = []   # Array to track issued books
-members = []        # Array to store library members
 
-def display_menu():
-    """Display the main menu options"""
-    print("\n" + "="*50)
-    print("         LIBRARY MANAGEMENT SYSTEM")
-    print("="*50)
-    print("1. Add New Book")
-    print("2. Display All Books")
-    print("3. Search Book")
-    print("4. Update Book Details")
-    print("5. Delete Book")
-    print("6. Add Library Member")
-    print("7. Display All Members")
-    print("8. Issue Book")
-    print("9. Return Book")
-    print("10. Display Issued Books")
-    print("11. Book Statistics")
-    print("12. Exit")
-    print("="*50)
+class Book:
+    """
+    Represents a book in the library system.
+    Uses __slots__ for memory efficiency.
+    """
+    __slots__ = ['book_id', 'title', 'author', 'isbn', 'category', 'publication_year', 
+                 'copies_total', 'copies_available', 'date_added']
+    
+    def __init__(self, book_id: int, title: str, author: str, isbn: str, 
+                 category: str, publication_year: int, copies: int = 1):
+        self.book_id = book_id
+        self.title = title.strip()
+        self.author = author.strip()
+        self.isbn = isbn.strip()
+        self.category = category.strip()
+        self.publication_year = publication_year
+        self.copies_total = copies
+        self.copies_available = copies
+        self.date_added = datetime.datetime.now()
+    
+    def __str__(self) -> str:
+        return (f"ID: {self.book_id} | {self.title} by {self.author} | "
+                f"ISBN: {self.isbn} | Available: {self.copies_available}/{self.copies_total}")
+    
+    def __repr__(self) -> str:
+        return f"Book(id={self.book_id}, title='{self.title}', author='{self.author}')"
 
-def add_book():
-    """Add a new book to the library"""
-    print("\n--- ADD NEW BOOK ---")
-    
-    # Get book details from user
-    book_id = input("Enter Book ID: ").strip()
-    
-    # Check if book ID already exists
-    for book in books:
-        if book[0] == book_id:
-            print("Error: Book ID already exists!")
-            return
-    
-    title = input("Enter Book Title: ").strip()
-    author = input("Enter Author Name: ").strip()
-    category = input("Enter Category: ").strip()
-    
-    # Get quantity with error handling
-    try:
-        quantity = int(input("Enter Quantity: "))
-        if quantity < 0:
-            print("Error: Quantity cannot be negative!")
-            return
-    except ValueError:
-        print("Error: Please enter a valid number for quantity!")
-        return
-    
-    # Create book record as array [ID, Title, Author, Category, Total_Qty, Available_Qty]
-    book_record = [book_id, title, author, category, quantity, quantity]
-    books.append(book_record)
-    
-    print(f"Book '{title}' added successfully!")
 
-def display_all_books():
-    """Display all books in the library"""
-    print("\n--- ALL BOOKS IN LIBRARY ---")
+class Member:
+    """
+    Represents a library member.
+    Uses __slots__ for memory efficiency.
+    """
+    __slots__ = ['member_id', 'name', 'email', 'phone', 'join_date', 'borrowed_books', 'fine_amount']
     
-    if not books:
-        print("No books available in the library.")
-        return
+    def __init__(self, member_id: int, name: str, email: str, phone: str):
+        self.member_id = member_id
+        self.name = name.strip()
+        self.email = email.strip()
+        self.phone = phone.strip()
+        self.join_date = datetime.datetime.now()
+        self.borrowed_books = []  # List of (book_id, borrow_date, due_date)
+        self.fine_amount = 0.0
     
-    # Print header
-    print(f"{'ID':<8} {'Title':<25} {'Author':<20} {'Category':<15} {'Total':<8} {'Available':<10}")
-    print("-" * 95)
-    
-    # Print all book records
-    for book in books:
-        print(f"{book[0]:<8} {book[1]:<25} {book[2]:<20} {book[3]:<15} {book[4]:<8} {book[5]:<10}")
+    def __str__(self) -> str:
+        return (f"ID: {self.member_id} | {self.name} | {self.email} | "
+                f"Books: {len(self.borrowed_books)} | Fine: ${self.fine_amount:.2f}")
 
-def search_book():
-    """Search for books by ID, title, or author"""
-    print("\n--- SEARCH BOOK ---")
-    print("1. Search by Book ID")
-    print("2. Search by Title")
-    print("3. Search by Author")
-    
-    try:
-        choice = int(input("Enter search option (1-3): "))
-    except ValueError:
-        print("Error: Please enter a valid option!")
-        return
-    
-    search_term = input("Enter search term: ").strip().lower()
-    found_books = []
-    
-    # Search based on user choice
-    for book in books:
-        if choice == 1 and book[0].lower() == search_term:
-            found_books.append(book)
-        elif choice == 2 and search_term in book[1].lower():
-            found_books.append(book)
-        elif choice == 3 and search_term in book[2].lower():
-            found_books.append(book)
-    
-    # Display search results
-    if found_books:
-        print(f"\nFound {len(found_books)} book(s):")
-        print(f"{'ID':<8} {'Title':<25} {'Author':<20} {'Category':<15} {'Total':<8} {'Available':<10}")
-        print("-" * 95)
-        for book in found_books:
-            print(f"{book[0]:<8} {book[1]:<25} {book[2]:<20} {book[3]:<15} {book[4]:<8} {book[5]:<10}")
-    else:
-        print("No books found matching your search criteria.")
 
-def update_book():
-    """Update book details"""
-    print("\n--- UPDATE BOOK DETAILS ---")
+class Transaction:
+    """
+    Represents a book transaction (borrow/return).
+    Uses __slots__ for memory efficiency.
+    """
+    __slots__ = ['transaction_id', 'member_id', 'book_id', 'transaction_type', 
+                 'transaction_date', 'due_date', 'return_date', 'fine_paid']
     
-    book_id = input("Enter Book ID to update: ").strip()
+    def __init__(self, transaction_id: int, member_id: int, book_id: int, 
+                 transaction_type: str, due_date: datetime.datetime = None):
+        self.transaction_id = transaction_id
+        self.member_id = member_id
+        self.book_id = book_id
+        self.transaction_type = transaction_type  # 'BORROW' or 'RETURN'
+        self.transaction_date = datetime.datetime.now()
+        self.due_date = due_date
+        self.return_date = None
+        self.fine_paid = 0.0
+
+
+class LibraryManagementSystem:
+    """
+    Advanced Library Management System with efficient data structures and algorithms.
+    """
     
-    # Find the book to update
-    book_found = False
-    for i, book in enumerate(books):
-        if book[0] == book_id:
-            book_found = True
-            print(f"\nCurrent details: {book[1]} by {book[2]}")
+    def __init__(self):
+        # Primary storage arrays
+        self.books: List[Book] = []
+        self.members: List[Member] = []
+        self.transactions: List[Transaction] = []
+        
+        # Hash maps for O(1) lookups - memory vs time tradeoff
+        self.book_id_index: Dict[int, int] = {}  # book_id -> array index
+        self.member_id_index: Dict[int, int] = {}  # member_id -> array index
+        self.isbn_index: Dict[str, int] = {}  # isbn -> book array index
+        
+        # Sorted arrays for binary search - O(log n) search
+        self.books_by_title: List[Tuple[str, int]] = []  # (title_lower, book_id)
+        self.books_by_author: List[Tuple[str, int]] = []  # (author_lower, book_id)
+        
+        # Category index for filtering
+        self.category_index: Dict[str, List[int]] = {}  # category -> [book_ids]
+        
+        # System counters
+        self.next_book_id = 1
+        self.next_member_id = 1
+        self.next_transaction_id = 1
+        
+        # Configuration
+        self.max_books_per_member = 5
+        self.loan_period_days = 14
+        self.fine_per_day = 1.0
+    
+    def _update_book_indices(self, book: Book, array_index: int) -> None:
+        """Update all book indices when a new book is added."""
+        # Update hash indices
+        self.book_id_index[book.book_id] = array_index
+        self.isbn_index[book.isbn] = array_index
+        
+        # Update sorted arrays for binary search
+        title_entry = (book.title.lower(), book.book_id)
+        author_entry = (book.author.lower(), book.book_id)
+        
+        bisect.insort(self.books_by_title, title_entry)
+        bisect.insort(self.books_by_author, author_entry)
+        
+        # Update category index
+        category = book.category.lower()
+        if category not in self.category_index:
+            self.category_index[category] = []
+        self.category_index[category].append(book.book_id)
+    
+    def add_book(self, title: str, author: str, isbn: str, category: str, 
+                 publication_year: int, copies: int = 1) -> bool:
+        """
+        Add a new book to the library.
+        Time Complexity: O(log n) due to sorted insertions
+        Space Complexity: O(1) additional space
+        """
+        try:
+            # Check if ISBN already exists
+            if isbn in self.isbn_index:
+                # Update existing book's copy count
+                existing_index = self.isbn_index[isbn]
+                self.books[existing_index].copies_total += copies
+                self.books[existing_index].copies_available += copies
+                print(f"Updated existing book. Total copies: {self.books[existing_index].copies_total}")
+                return True
             
-            # Get new details (allow empty input to keep current value)
-            new_title = input(f"Enter new title (current: {book[1]}): ").strip()
-            new_author = input(f"Enter new author (current: {book[2]}): ").strip()
-            new_category = input(f"Enter new category (current: {book[3]}): ").strip()
+            # Create new book
+            book = Book(self.next_book_id, title, author, isbn, category, 
+                       publication_year, copies)
             
-            # Update only if new values are provided
-            if new_title:
-                books[i][1] = new_title
-            if new_author:
-                books[i][2] = new_author
-            if new_category:
-                books[i][3] = new_category
+            # Add to main array
+            self.books.append(book)
+            array_index = len(self.books) - 1
             
-            print("Book details updated successfully!")
-            break
-    
-    if not book_found:
-        print("Error: Book ID not found!")
-
-def delete_book():
-    """Delete a book from the library"""
-    print("\n--- DELETE BOOK ---")
-    
-    book_id = input("Enter Book ID to delete: ").strip()
-    
-    # Find and remove the book
-    book_found = False
-    for i, book in enumerate(books):
-        if book[0] == book_id:
-            # Check if book is currently issued
-            issued_count = 0
-            for issued in issued_books:
-                if issued[1] == book_id:
-                    issued_count += 1
+            # Update all indices
+            self._update_book_indices(book, array_index)
             
-            if issued_count > 0:
-                print(f"Error: Cannot delete book. {issued_count} copy/copies are currently issued.")
-                return
+            self.next_book_id += 1
+            print(f"Book added successfully: {book}")
+            return True
             
-            # Confirm deletion
-            confirm = input(f"Are you sure you want to delete '{book[1]}'? (y/n): ").lower()
-            if confirm == 'y':
-                books.pop(i)
-                print("Book deleted successfully!")
-            else:
-                print("Deletion cancelled.")
-            book_found = True
-            break
+        except Exception as e:
+            print(f"Error adding book: {e}")
+            return False
     
-    if not book_found:
-        print("Error: Book ID not found!")
-
-def add_member():
-    """Add a new library member"""
-    print("\n--- ADD LIBRARY MEMBER ---")
-    
-    member_id = input("Enter Member ID: ").strip()
-    
-    # Check if member ID already exists
-    for member in members:
-        if member[0] == member_id:
-            print("Error: Member ID already exists!")
-            return
-    
-    name = input("Enter Member Name: ").strip()
-    phone = input("Enter Phone Number: ").strip()
-    email = input("Enter Email: ").strip()
-    
-    # Create member record [ID, Name, Phone, Email, Books_Issued_Count]
-    member_record = [member_id, name, phone, email, 0]
-    members.append(member_record)
-    
-    print(f"Member '{name}' added successfully!")
-
-def display_all_members():
-    """Display all library members"""
-    print("\n--- ALL LIBRARY MEMBERS ---")
-    
-    if not members:
-        print("No members registered.")
-        return
-    
-    # Print header
-    print(f"{'ID':<8} {'Name':<20} {'Phone':<15} {'Email':<25} {'Books Issued':<12}")
-    print("-" * 85)
-    
-    # Print all member records
-    for member in members:
-        print(f"{member[0]:<8} {member[1]:<20} {member[2]:<15} {member[3]:<25} {member[4]:<12}")
-
-def issue_book():
-    """Issue a book to a member"""
-    print("\n--- ISSUE BOOK ---")
-    
-    member_id = input("Enter Member ID: ").strip()
-    book_id = input("Enter Book ID: ").strip()
-    
-    # Check if member exists
-    member_found = False
-    member_index = -1
-    for i, member in enumerate(members):
-        if member[0] == member_id:
-            member_found = True
-            member_index = i
-            break
-    
-    if not member_found:
-        print("Error: Member ID not found!")
-        return
-    
-    # Check if book exists and is available
-    book_found = False
-    book_index = -1
-    for i, book in enumerate(books):
-        if book[0] == book_id:
-            book_found = True
-            book_index = i
-            if book[5] > 0:  # Available quantity > 0
-                # Issue the book
-                issue_date = input("Enter issue date (DD/MM/YYYY): ").strip()
-                due_date = input("Enter due date (DD/MM/YYYY): ").strip()
-                
-                # Create issue record [Member_ID, Book_ID, Book_Title, Issue_Date, Due_Date, Status]
-                issue_record = [member_id, book_id, book[1], issue_date, due_date, "Issued"]
-                issued_books.append(issue_record)
-                
-                # Update quantities
-                books[book_index][5] -= 1  # Decrease available quantity
-                members[member_index][4] += 1  # Increase member's issued books count
-                
-                print(f"Book '{book[1]}' issued successfully to {members[member_index][1]}!")
-            else:
-                print("Error: Book is not available (all copies are issued)!")
-            break
-    
-    if not book_found:
-        print("Error: Book ID not found!")
-
-def return_book():
-    """Return an issued book"""
-    print("\n--- RETURN BOOK ---")
-    
-    member_id = input("Enter Member ID: ").strip()
-    book_id = input("Enter Book ID: ").strip()
-    
-    # Find the issued book record
-    issue_found = False
-    for i, issued in enumerate(issued_books):
-        if issued[0] == member_id and issued[1] == book_id and issued[5] == "Issued":
-            # Mark as returned
-            issued_books[i][5] = "Returned"
-            return_date = input("Enter return date (DD/MM/YYYY): ").strip()
-            issued_books[i].append(return_date)  # Add return date to record
+    def add_member(self, name: str, email: str, phone: str) -> bool:
+        """
+        Add a new member to the library.
+        Time Complexity: O(1)
+        Space Complexity: O(1)
+        """
+        try:
+            member = Member(self.next_member_id, name, email, phone)
             
-            # Update quantities
-            for j, book in enumerate(books):
-                if book[0] == book_id:
-                    books[j][5] += 1  # Increase available quantity
+            # Add to main array
+            self.members.append(member)
+            array_index = len(self.members) - 1
+            
+            # Update index
+            self.member_id_index[member.member_id] = array_index
+            
+            self.next_member_id += 1
+            print(f"Member added successfully: {member}")
+            return True
+            
+        except Exception as e:
+            print(f"Error adding member: {e}")
+            return False
+    
+    def search_books_by_title(self, title: str) -> List[Book]:
+        """
+        Search books by title using binary search.
+        Time Complexity: O(log n + k) where k is number of matches
+        """
+        title_lower = title.lower()
+        results = []
+        
+        # Find the first occurrence
+        left_idx = bisect.bisect_left(self.books_by_title, (title_lower, 0))
+        
+        # Collect all matches
+        for i in range(left_idx, len(self.books_by_title)):
+            stored_title, book_id = self.books_by_title[i]
+            if not stored_title.startswith(title_lower):
+                break
+            
+            book_idx = self.book_id_index[book_id]
+            results.append(self.books[book_idx])
+        
+        return results
+    
+    def search_books_by_author(self, author: str) -> List[Book]:
+        """
+        Search books by author using binary search.
+        Time Complexity: O(log n + k) where k is number of matches
+        """
+        author_lower = author.lower()
+        results = []
+        
+        # Find the first occurrence
+        left_idx = bisect.bisect_left(self.books_by_author, (author_lower, 0))
+        
+        # Collect all matches
+        for i in range(left_idx, len(self.books_by_author)):
+            stored_author, book_id = self.books_by_author[i]
+            if not stored_author.startswith(author_lower):
+                break
+            
+            book_idx = self.book_id_index[book_id]
+            results.append(self.books[book_idx])
+        
+        return results
+    
+    def search_books_by_category(self, category: str) -> List[Book]:
+        """
+        Search books by category using hash index.
+        Time Complexity: O(k) where k is number of books in category
+        """
+        category_lower = category.lower()
+        results = []
+        
+        if category_lower in self.category_index:
+            for book_id in self.category_index[category_lower]:
+                book_idx = self.book_id_index[book_id]
+                results.append(self.books[book_idx])
+        
+        return results
+    
+    def get_book_by_id(self, book_id: int) -> Optional[Book]:
+        """
+        Get book by ID using hash lookup.
+        Time Complexity: O(1)
+        """
+        if book_id in self.book_id_index:
+            index = self.book_id_index[book_id]
+            return self.books[index]
+        return None
+    
+    def get_member_by_id(self, member_id: int) -> Optional[Member]:
+        """
+        Get member by ID using hash lookup.
+        Time Complexity: O(1)
+        """
+        if member_id in self.member_id_index:
+            index = self.member_id_index[member_id]
+            return self.members[index]
+        return None
+    
+    def borrow_book(self, member_id: int, book_id: int) -> bool:
+        """
+        Process book borrowing with validation.
+        Time Complexity: O(1)
+        """
+        try:
+            # Get member and book
+            member = self.get_member_by_id(member_id)
+            book = self.get_book_by_id(book_id)
+            
+            if not member:
+                print(f"Member with ID {member_id} not found")
+                return False
+            
+            if not book:
+                print(f"Book with ID {book_id} not found")
+                return False
+            
+            # Validation checks
+            if book.copies_available <= 0:
+                print("Book is not available")
+                return False
+            
+            if len(member.borrowed_books) >= self.max_books_per_member:
+                print(f"Member has reached maximum borrowing limit ({self.max_books_per_member})")
+                return False
+            
+            # Check if member already has this book
+            for borrowed_book_id, _, _ in member.borrowed_books:
+                if borrowed_book_id == book_id:
+                    print("Member already has this book")
+                    return False
+            
+            # Process borrowing
+            borrow_date = datetime.datetime.now()
+            due_date = borrow_date + datetime.timedelta(days=self.loan_period_days)
+            
+            # Update book availability
+            book.copies_available -= 1
+            
+            # Update member's borrowed books
+            member.borrowed_books.append((book_id, borrow_date, due_date))
+            
+            # Create transaction record
+            transaction = Transaction(
+                self.next_transaction_id, member_id, book_id, 'BORROW', due_date
+            )
+            self.transactions.append(transaction)
+            self.next_transaction_id += 1
+            
+            print(f"Book borrowed successfully. Due date: {due_date.strftime('%Y-%m-%d')}")
+            return True
+            
+        except Exception as e:
+            print(f"Error borrowing book: {e}")
+            return False
+    
+    def return_book(self, member_id: int, book_id: int) -> bool:
+        """
+        Process book return with fine calculation.
+        Time Complexity: O(n) where n is number of borrowed books by member
+        """
+        try:
+            member = self.get_member_by_id(member_id)
+            book = self.get_book_by_id(book_id)
+            
+            if not member or not book:
+                print("Member or book not found")
+                return False
+            
+            # Find the borrowed book
+            book_found = False
+            return_date = datetime.datetime.now()
+            fine = 0.0
+            
+            for i, (borrowed_book_id, borrow_date, due_date) in enumerate(member.borrowed_books):
+                if borrowed_book_id == book_id:
+                    # Calculate fine if overdue
+                    if return_date > due_date:
+                        days_overdue = (return_date - due_date).days
+                        fine = days_overdue * self.fine_per_day
+                        member.fine_amount += fine
+                    
+                    # Remove from borrowed books
+                    member.borrowed_books.pop(i)
+                    book_found = True
                     break
             
-            # Update member's issued books count
-            for j, member in enumerate(members):
-                if member[0] == member_id:
-                    members[j][4] -= 1
-                    break
+            if not book_found:
+                print("This book is not borrowed by the member")
+                return False
             
-            print(f"Book '{issued[2]}' returned successfully!")
-            issue_found = True
-            break
+            # Update book availability
+            book.copies_available += 1
+            
+            # Create return transaction
+            transaction = Transaction(
+                self.next_transaction_id, member_id, book_id, 'RETURN'
+            )
+            transaction.return_date = return_date
+            transaction.fine_paid = fine
+            self.transactions.append(transaction)
+            self.next_transaction_id += 1
+            
+            if fine > 0:
+                print(f"Book returned with fine: ${fine:.2f}")
+            else:
+                print("Book returned successfully")
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error returning book: {e}")
+            return False
     
-    if not issue_found:
-        print("Error: No issued book found for this member and book combination!")
+    def get_overdue_books(self) -> List[Tuple[Member, Book, int]]:
+        """
+        Get all overdue books with member and days overdue.
+        Time Complexity: O(m * b) where m is members, b is avg borrowed books
+        """
+        overdue_books = []
+        current_date = datetime.datetime.now()
+        
+        for member in self.members:
+            for book_id, borrow_date, due_date in member.borrowed_books:
+                if current_date > due_date:
+                    days_overdue = (current_date - due_date).days
+                    book = self.get_book_by_id(book_id)
+                    if book:
+                        overdue_books.append((member, book, days_overdue))
+        
+        return overdue_books
+    
+    def display_all_books(self) -> None:
+        """Display all books in the library."""
+        if not self.books:
+            print("No books in the library")
+            return
+        
+        print(f"\n{'='*80}")
+        print(f"{'LIBRARY BOOKS':<80}")
+        print(f"{'='*80}")
+        
+        for book in self.books:
+            print(book)
+    
+    def display_all_members(self) -> None:
+        """Display all members."""
+        if not self.members:
+            print("No members registered")
+            return
+        
+        print(f"\n{'='*80}")
+        print(f"{'LIBRARY MEMBERS':<80}")
+        print(f"{'='*80}")
+        
+        for member in self.members:
+            print(member)
+    
+    def display_member_books(self, member_id: int) -> None:
+        """Display books borrowed by a specific member."""
+        member = self.get_member_by_id(member_id)
+        if not member:
+            print(f"Member with ID {member_id} not found")
+            return
+        
+        print(f"\nBooks borrowed by {member.name}:")
+        if not member.borrowed_books:
+            print("No books currently borrowed")
+            return
+        
+        for book_id, borrow_date, due_date in member.borrowed_books:
+            book = self.get_book_by_id(book_id)
+            if book:
+                status = "OVERDUE" if datetime.datetime.now() > due_date else "ON TIME"
+                print(f"- {book.title} (Due: {due_date.strftime('%Y-%m-%d')}) [{status}]")
+    
+    def generate_library_report(self) -> None:
+        """Generate comprehensive library statistics."""
+        total_books = sum(book.copies_total for book in self.books)
+        available_books = sum(book.copies_available for book in self.books)
+        borrowed_books = total_books - available_books
+        
+        total_members = len(self.members)
+        active_members = sum(1 for member in self.members if member.borrowed_books)
+        
+        total_fines = sum(member.fine_amount for member in self.members)
+        overdue_count = len(self.get_overdue_books())
+        
+        print(f"\n{'='*50}")
+        print(f"{'LIBRARY MANAGEMENT REPORT':<50}")
+        print(f"{'='*50}")
+        print(f"Total Books: {total_books}")
+        print(f"Available Books: {available_books}")
+        print(f"Borrowed Books: {borrowed_books}")
+        print(f"Total Members: {total_members}")
+        print(f"Active Members: {active_members}")
+        print(f"Overdue Books: {overdue_count}")
+        print(f"Total Fines: ${total_fines:.2f}")
+        print(f"Categories: {len(self.category_index)}")
+        print(f"{'='*50}")
 
-def display_issued_books():
-    """Display all currently issued books"""
-    print("\n--- ISSUED BOOKS ---")
-    
-    # Filter only currently issued books
-    current_issued = []
-    for issued in issued_books:
-        if issued[5] == "Issued":
-            current_issued.append(issued)
-    
-    if not current_issued:
-        print("No books are currently issued.")
-        return
-    
-    # Print header
-    print(f"{'Member ID':<10} {'Book ID':<8} {'Book Title':<25} {'Issue Date':<12} {'Due Date':<12}")
-    print("-" * 75)
-    
-    # Print issued book records
-    for issued in current_issued:
-        print(f"{issued[0]:<10} {issued[1]:<8} {issued[2]:<25} {issued[3]:<12} {issued[4]:<12}")
-
-def book_statistics():
-    """Display library statistics"""
-    print("\n--- LIBRARY STATISTICS ---")
-    
-    if not books:
-        print("No books in the library to show statistics.")
-        return
-    
-    total_books = sum(book[4] for book in books)  # Sum of all total quantities
-    available_books = sum(book[5] for book in books)  # Sum of all available quantities
-    issued_books_count = total_books - available_books
-    
-    print(f"Total Books in Library: {total_books}")
-    print(f"Available Books: {available_books}")
-    print(f"Currently Issued Books: {issued_books_count}")
-    print(f"Total Book Titles: {len(books)}")
-    print(f"Total Registered Members: {len(members)}")
-    
-    # Category-wise statistics
-    categories = {}
-    for book in books:
-        category = book[3]
-        if category in categories:
-            categories[category] += book[4]
-        else:
-            categories[category] = book[4]
-    
-    print(f"\nCategory-wise Book Count:")
-    for category, count in categories.items():
-        print(f"  {category}: {count}")
 
 def main():
-    """Main function to run the library management system"""
-    print("Welcome to Library Management System!")
+    """
+    Main function to demonstrate the library management system.
+    """
+    # Initialize the library system
+    library = LibraryManagementSystem()
     
-    while True:
-        display_menu()
-        
-        try:
-            choice = int(input("\nEnter your choice (1-12): "))
-        except ValueError:
-            print("Error: Please enter a valid number!")
-            continue
-        
-        # Execute based on user choice
-        if choice == 1:
-            add_book()
-        elif choice == 2:
-            display_all_books()
-        elif choice == 3:
-            search_book()
-        elif choice == 4:
-            update_book()
-        elif choice == 5:
-            delete_book()
-        elif choice == 6:
-            add_member()
-        elif choice == 7:
-            display_all_members()
-        elif choice == 8:
-            issue_book()
-        elif choice == 9:
-            return_book()
-        elif choice == 10:
-            display_issued_books()
-        elif choice == 11:
-            book_statistics()
-        elif choice == 12:
-            print("\nThank you for using Library Management System!")
-            print("Goodbye!")
-            break
-        else:
-            print("Error: Invalid choice! Please select from 1-12.")
-        
-        # Pause before showing menu again
-        input("\nPress Enter to continue...")
+    # Sample data
+    print("Setting up sample library data...")
+    
+    # Add sample books
+    library.add_book("The Great Gatsby", "F. Scott Fitzgerald", "978-0-7432-7356-5", "Fiction", 1925, 3)
+    library.add_book("To Kill a Mockingbird", "Harper Lee", "978-0-06-112008-4", "Fiction", 1960, 2)
+    library.add_book("Python Programming", "John Smith", "978-1-23456-789-0", "Technology", 2023, 5)
+    library.add_book("Data Structures", "Robert Johnson", "978-9-87654-321-0", "Technology", 2022, 4)
+    library.add_book("The Catcher in the Rye", "J.D. Salinger", "978-0-316-76948-0", "Fiction", 1951, 2)
+    
+    # Add sample members
+    library.add_member("Alice Johnson", "alice@email.com", "123-456-7890")
+    library.add_member("Bob Smith", "bob@email.com", "098-765-4321")
+    library.add_member("Carol Davis", "carol@email.com", "555-123-4567")
+    
+    # Demonstrate system functionality
+    print("\n" + "="*60)
+    print("LIBRARY MANAGEMENT SYSTEM DEMONSTRATION")
+    print("="*60)
+    
+    # Display all books
+    library.display_all_books()
+    
+    # Search functionality
+    print("\n--- Search Results ---")
+    print("Books with 'Python' in title:")
+    results = library.search_books_by_title("Python")
+    for book in results:
+        print(f"  {book}")
+    
+    print("\nBooks by author 'Harper':")
+    results = library.search_books_by_author("Harper")
+    for book in results:
+        print(f"  {book}")
+    
+    print("\nTechnology books:")
+    results = library.search_books_by_category("Technology")
+    for book in results:
+        print(f"  {book}")
+    
+    # Borrowing books
+    print("\n--- Borrowing Books ---")
+    library.borrow_book(1, 1)  # Alice borrows The Great Gatsby
+    library.borrow_book(1, 3)  # Alice borrows Python Programming
+    library.borrow_book(2, 2)  # Bob borrows To Kill a Mockingbird
+    
+    # Display member's borrowed books
+    print("\n--- Member's Borrowed Books ---")
+    library.display_member_books(1)
+    
+    # Generate report
+    library.generate_library_report()
+    
+    print("\nLibrary Management System demonstration completed!")
 
-# Run the program
+
 if __name__ == "__main__":
     main()
