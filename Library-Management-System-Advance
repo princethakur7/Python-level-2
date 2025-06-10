@@ -1,0 +1,399 @@
+# Library Management System using Arrays
+# A simple yet comprehensive system to manage books without OOP
+
+# Global arrays to store library data
+books = []          # Main array to store all book records
+issued_books = []   # Array to track issued books
+members = []        # Array to store library members
+
+def display_menu():
+    """Display the main menu options"""
+    print("\n" + "="*50)
+    print("         LIBRARY MANAGEMENT SYSTEM")
+    print("="*50)
+    print("1. Add New Book")
+    print("2. Display All Books")
+    print("3. Search Book")
+    print("4. Update Book Details")
+    print("5. Delete Book")
+    print("6. Add Library Member")
+    print("7. Display All Members")
+    print("8. Issue Book")
+    print("9. Return Book")
+    print("10. Display Issued Books")
+    print("11. Book Statistics")
+    print("12. Exit")
+    print("="*50)
+
+def add_book():
+    """Add a new book to the library"""
+    print("\n--- ADD NEW BOOK ---")
+    
+    # Get book details from user
+    book_id = input("Enter Book ID: ").strip()
+    
+    # Check if book ID already exists
+    for book in books:
+        if book[0] == book_id:
+            print("Error: Book ID already exists!")
+            return
+    
+    title = input("Enter Book Title: ").strip()
+    author = input("Enter Author Name: ").strip()
+    category = input("Enter Category: ").strip()
+    
+    # Get quantity with error handling
+    try:
+        quantity = int(input("Enter Quantity: "))
+        if quantity < 0:
+            print("Error: Quantity cannot be negative!")
+            return
+    except ValueError:
+        print("Error: Please enter a valid number for quantity!")
+        return
+    
+    # Create book record as array [ID, Title, Author, Category, Total_Qty, Available_Qty]
+    book_record = [book_id, title, author, category, quantity, quantity]
+    books.append(book_record)
+    
+    print(f"Book '{title}' added successfully!")
+
+def display_all_books():
+    """Display all books in the library"""
+    print("\n--- ALL BOOKS IN LIBRARY ---")
+    
+    if not books:
+        print("No books available in the library.")
+        return
+    
+    # Print header
+    print(f"{'ID':<8} {'Title':<25} {'Author':<20} {'Category':<15} {'Total':<8} {'Available':<10}")
+    print("-" * 95)
+    
+    # Print all book records
+    for book in books:
+        print(f"{book[0]:<8} {book[1]:<25} {book[2]:<20} {book[3]:<15} {book[4]:<8} {book[5]:<10}")
+
+def search_book():
+    """Search for books by ID, title, or author"""
+    print("\n--- SEARCH BOOK ---")
+    print("1. Search by Book ID")
+    print("2. Search by Title")
+    print("3. Search by Author")
+    
+    try:
+        choice = int(input("Enter search option (1-3): "))
+    except ValueError:
+        print("Error: Please enter a valid option!")
+        return
+    
+    search_term = input("Enter search term: ").strip().lower()
+    found_books = []
+    
+    # Search based on user choice
+    for book in books:
+        if choice == 1 and book[0].lower() == search_term:
+            found_books.append(book)
+        elif choice == 2 and search_term in book[1].lower():
+            found_books.append(book)
+        elif choice == 3 and search_term in book[2].lower():
+            found_books.append(book)
+    
+    # Display search results
+    if found_books:
+        print(f"\nFound {len(found_books)} book(s):")
+        print(f"{'ID':<8} {'Title':<25} {'Author':<20} {'Category':<15} {'Total':<8} {'Available':<10}")
+        print("-" * 95)
+        for book in found_books:
+            print(f"{book[0]:<8} {book[1]:<25} {book[2]:<20} {book[3]:<15} {book[4]:<8} {book[5]:<10}")
+    else:
+        print("No books found matching your search criteria.")
+
+def update_book():
+    """Update book details"""
+    print("\n--- UPDATE BOOK DETAILS ---")
+    
+    book_id = input("Enter Book ID to update: ").strip()
+    
+    # Find the book to update
+    book_found = False
+    for i, book in enumerate(books):
+        if book[0] == book_id:
+            book_found = True
+            print(f"\nCurrent details: {book[1]} by {book[2]}")
+            
+            # Get new details (allow empty input to keep current value)
+            new_title = input(f"Enter new title (current: {book[1]}): ").strip()
+            new_author = input(f"Enter new author (current: {book[2]}): ").strip()
+            new_category = input(f"Enter new category (current: {book[3]}): ").strip()
+            
+            # Update only if new values are provided
+            if new_title:
+                books[i][1] = new_title
+            if new_author:
+                books[i][2] = new_author
+            if new_category:
+                books[i][3] = new_category
+            
+            print("Book details updated successfully!")
+            break
+    
+    if not book_found:
+        print("Error: Book ID not found!")
+
+def delete_book():
+    """Delete a book from the library"""
+    print("\n--- DELETE BOOK ---")
+    
+    book_id = input("Enter Book ID to delete: ").strip()
+    
+    # Find and remove the book
+    book_found = False
+    for i, book in enumerate(books):
+        if book[0] == book_id:
+            # Check if book is currently issued
+            issued_count = 0
+            for issued in issued_books:
+                if issued[1] == book_id:
+                    issued_count += 1
+            
+            if issued_count > 0:
+                print(f"Error: Cannot delete book. {issued_count} copy/copies are currently issued.")
+                return
+            
+            # Confirm deletion
+            confirm = input(f"Are you sure you want to delete '{book[1]}'? (y/n): ").lower()
+            if confirm == 'y':
+                books.pop(i)
+                print("Book deleted successfully!")
+            else:
+                print("Deletion cancelled.")
+            book_found = True
+            break
+    
+    if not book_found:
+        print("Error: Book ID not found!")
+
+def add_member():
+    """Add a new library member"""
+    print("\n--- ADD LIBRARY MEMBER ---")
+    
+    member_id = input("Enter Member ID: ").strip()
+    
+    # Check if member ID already exists
+    for member in members:
+        if member[0] == member_id:
+            print("Error: Member ID already exists!")
+            return
+    
+    name = input("Enter Member Name: ").strip()
+    phone = input("Enter Phone Number: ").strip()
+    email = input("Enter Email: ").strip()
+    
+    # Create member record [ID, Name, Phone, Email, Books_Issued_Count]
+    member_record = [member_id, name, phone, email, 0]
+    members.append(member_record)
+    
+    print(f"Member '{name}' added successfully!")
+
+def display_all_members():
+    """Display all library members"""
+    print("\n--- ALL LIBRARY MEMBERS ---")
+    
+    if not members:
+        print("No members registered.")
+        return
+    
+    # Print header
+    print(f"{'ID':<8} {'Name':<20} {'Phone':<15} {'Email':<25} {'Books Issued':<12}")
+    print("-" * 85)
+    
+    # Print all member records
+    for member in members:
+        print(f"{member[0]:<8} {member[1]:<20} {member[2]:<15} {member[3]:<25} {member[4]:<12}")
+
+def issue_book():
+    """Issue a book to a member"""
+    print("\n--- ISSUE BOOK ---")
+    
+    member_id = input("Enter Member ID: ").strip()
+    book_id = input("Enter Book ID: ").strip()
+    
+    # Check if member exists
+    member_found = False
+    member_index = -1
+    for i, member in enumerate(members):
+        if member[0] == member_id:
+            member_found = True
+            member_index = i
+            break
+    
+    if not member_found:
+        print("Error: Member ID not found!")
+        return
+    
+    # Check if book exists and is available
+    book_found = False
+    book_index = -1
+    for i, book in enumerate(books):
+        if book[0] == book_id:
+            book_found = True
+            book_index = i
+            if book[5] > 0:  # Available quantity > 0
+                # Issue the book
+                issue_date = input("Enter issue date (DD/MM/YYYY): ").strip()
+                due_date = input("Enter due date (DD/MM/YYYY): ").strip()
+                
+                # Create issue record [Member_ID, Book_ID, Book_Title, Issue_Date, Due_Date, Status]
+                issue_record = [member_id, book_id, book[1], issue_date, due_date, "Issued"]
+                issued_books.append(issue_record)
+                
+                # Update quantities
+                books[book_index][5] -= 1  # Decrease available quantity
+                members[member_index][4] += 1  # Increase member's issued books count
+                
+                print(f"Book '{book[1]}' issued successfully to {members[member_index][1]}!")
+            else:
+                print("Error: Book is not available (all copies are issued)!")
+            break
+    
+    if not book_found:
+        print("Error: Book ID not found!")
+
+def return_book():
+    """Return an issued book"""
+    print("\n--- RETURN BOOK ---")
+    
+    member_id = input("Enter Member ID: ").strip()
+    book_id = input("Enter Book ID: ").strip()
+    
+    # Find the issued book record
+    issue_found = False
+    for i, issued in enumerate(issued_books):
+        if issued[0] == member_id and issued[1] == book_id and issued[5] == "Issued":
+            # Mark as returned
+            issued_books[i][5] = "Returned"
+            return_date = input("Enter return date (DD/MM/YYYY): ").strip()
+            issued_books[i].append(return_date)  # Add return date to record
+            
+            # Update quantities
+            for j, book in enumerate(books):
+                if book[0] == book_id:
+                    books[j][5] += 1  # Increase available quantity
+                    break
+            
+            # Update member's issued books count
+            for j, member in enumerate(members):
+                if member[0] == member_id:
+                    members[j][4] -= 1
+                    break
+            
+            print(f"Book '{issued[2]}' returned successfully!")
+            issue_found = True
+            break
+    
+    if not issue_found:
+        print("Error: No issued book found for this member and book combination!")
+
+def display_issued_books():
+    """Display all currently issued books"""
+    print("\n--- ISSUED BOOKS ---")
+    
+    # Filter only currently issued books
+    current_issued = []
+    for issued in issued_books:
+        if issued[5] == "Issued":
+            current_issued.append(issued)
+    
+    if not current_issued:
+        print("No books are currently issued.")
+        return
+    
+    # Print header
+    print(f"{'Member ID':<10} {'Book ID':<8} {'Book Title':<25} {'Issue Date':<12} {'Due Date':<12}")
+    print("-" * 75)
+    
+    # Print issued book records
+    for issued in current_issued:
+        print(f"{issued[0]:<10} {issued[1]:<8} {issued[2]:<25} {issued[3]:<12} {issued[4]:<12}")
+
+def book_statistics():
+    """Display library statistics"""
+    print("\n--- LIBRARY STATISTICS ---")
+    
+    if not books:
+        print("No books in the library to show statistics.")
+        return
+    
+    total_books = sum(book[4] for book in books)  # Sum of all total quantities
+    available_books = sum(book[5] for book in books)  # Sum of all available quantities
+    issued_books_count = total_books - available_books
+    
+    print(f"Total Books in Library: {total_books}")
+    print(f"Available Books: {available_books}")
+    print(f"Currently Issued Books: {issued_books_count}")
+    print(f"Total Book Titles: {len(books)}")
+    print(f"Total Registered Members: {len(members)}")
+    
+    # Category-wise statistics
+    categories = {}
+    for book in books:
+        category = book[3]
+        if category in categories:
+            categories[category] += book[4]
+        else:
+            categories[category] = book[4]
+    
+    print(f"\nCategory-wise Book Count:")
+    for category, count in categories.items():
+        print(f"  {category}: {count}")
+
+def main():
+    """Main function to run the library management system"""
+    print("Welcome to Library Management System!")
+    
+    while True:
+        display_menu()
+        
+        try:
+            choice = int(input("\nEnter your choice (1-12): "))
+        except ValueError:
+            print("Error: Please enter a valid number!")
+            continue
+        
+        # Execute based on user choice
+        if choice == 1:
+            add_book()
+        elif choice == 2:
+            display_all_books()
+        elif choice == 3:
+            search_book()
+        elif choice == 4:
+            update_book()
+        elif choice == 5:
+            delete_book()
+        elif choice == 6:
+            add_member()
+        elif choice == 7:
+            display_all_members()
+        elif choice == 8:
+            issue_book()
+        elif choice == 9:
+            return_book()
+        elif choice == 10:
+            display_issued_books()
+        elif choice == 11:
+            book_statistics()
+        elif choice == 12:
+            print("\nThank you for using Library Management System!")
+            print("Goodbye!")
+            break
+        else:
+            print("Error: Invalid choice! Please select from 1-12.")
+        
+        # Pause before showing menu again
+        input("\nPress Enter to continue...")
+
+# Run the program
+if __name__ == "__main__":
+    main()
