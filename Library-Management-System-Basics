@@ -1,0 +1,133 @@
+# Initialize library arrays
+book_ids = []
+book_titles = []
+book_authors = []
+book_status = []  # "Available" or "Issued"
+
+# Function to add a new book
+def add_book():
+    print("\n📘 Add New Book")
+    book_id = input("Enter Book ID: ")
+    title = input("Enter Book Title: ")
+    author = input("Enter Book Author: ")
+
+    # Add details to respective lists
+    book_ids.append(book_id)
+    book_titles.append(title)
+    book_authors.append(author)
+    book_status.append("Available")
+
+    print(f"✅ Book '{title}' added successfully!")
+
+# Function to view all books
+def view_books():
+    print("\n📚 Library Book List")
+    if len(book_ids) == 0:
+        print("No books in the library yet.")
+        return
+
+    print(f"{'ID':<10}{'Title':<30}{'Author':<20}{'Status'}")
+    print("-" * 70)
+    for i in range(len(book_ids)):
+        print(f"{book_ids[i]:<10}{book_titles[i]:<30}{book_authors[i]:<20}{book_status[i]}")
+
+# Function to issue a book
+def issue_book():
+    print("\n📕 Issue a Book")
+    book_id = input("Enter Book ID to issue: ")
+
+    if book_id in book_ids:
+        index = book_ids.index(book_id)
+        if book_status[index] == "Available":
+            book_status[index] = "Issued"
+            print(f"✅ Book '{book_titles[index]}' issued successfully!")
+        else:
+            print("⚠️ Book is already issued.")
+    else:
+        print("❌ Book ID not found.")
+
+# Function to return a book
+def return_book():
+    print("\n📗 Return a Book")
+    book_id = input("Enter Book ID to return: ")
+
+    if book_id in book_ids:
+        index = book_ids.index(book_id)
+        if book_status[index] == "Issued":
+            book_status[index] = "Available"
+            print(f"✅ Book '{book_titles[index]}' returned successfully!")
+        else:
+            print("⚠️ Book was not issued.")
+    else:
+        print("❌ Book ID not found.")
+
+# Function to search a book by title
+def search_book():
+    print("\n🔍 Search a Book by Title")
+    search_title = input("Enter Book Title to search: ").lower()
+
+    found = False
+    for i in range(len(book_titles)):
+        if search_title in book_titles[i].lower():
+            print(f"\n✅ Found: {book_ids[i]} | {book_titles[i]} by {book_authors[i]} [{book_status[i]}]")
+            found = True
+
+    if not found:
+        print("❌ Book not found.")
+
+# Function to delete a book
+def delete_book():
+    print("\n❌ Delete a Book")
+    book_id = input("Enter Book ID to delete: ")
+
+    if book_id in book_ids:
+        index = book_ids.index(book_id)
+        print(f"⚠️ Deleting book: {book_titles[index]}")
+
+        # Delete from all lists
+        book_ids.pop(index)
+        book_titles.pop(index)
+        book_authors.pop(index)
+        book_status.pop(index)
+
+        print("✅ Book deleted successfully.")
+    else:
+        print("❌ Book ID not found.")
+
+# Main Menu Loop
+def library_system():
+    while True:
+        print("\n===============================")
+        print("📚 Welcome to Library System")
+        print("===============================")
+        print("1. Add Book")
+        print("2. View All Books")
+        print("3. Issue a Book")
+        print("4. Return a Book")
+        print("5. Search Book by Title")
+        print("6. Delete a Book")
+        print("7. Exit")
+        print("===============================")
+
+        choice = input("Enter your choice (1-7): ")
+
+        if choice == '1':
+            add_book()
+        elif choice == '2':
+            view_books()
+        elif choice == '3':
+            issue_book()
+        elif choice == '4':
+            return_book()
+        elif choice == '5':
+            search_book()
+        elif choice == '6':
+            delete_book()
+        elif choice == '7':
+            print("👋 Exiting Library System. Goodbye!")
+            break
+        else:
+            print("❌ Invalid choice. Try again.")
+
+# Run the system
+library_system()
