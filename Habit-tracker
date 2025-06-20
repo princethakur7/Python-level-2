@@ -1,0 +1,98 @@
+# 🧠 Habit Tracker in Python using Arrays
+
+## 📌 Description
+This is a simple and interactive habit tracker built in Python using arrays. Track your daily habits, mark them as done, reset the tracker, or delete habits using a menu-driven CLI interface.
+
+## 🛠️ Features
+- Add new habits
+- View current habits
+- Mark habits as done
+- Delete habits
+- Reset all habit statuses
+
+
+
+# 📘 source code
+
+# Lists to store habit details
+habit_names = []
+habit_status = []  # 'Done' or 'Not Done'
+
+# Function to add a new habit
+def add_habit():
+    habit = input("Enter the name of the new habit: ")
+    habit_names.append(habit)
+    habit_status.append("Not Done")  # default status
+    print(f"Habit '{habit}' added successfully!\n")
+
+# Function to view all habits
+def view_habits():
+    if not habit_names:
+        print("No habits added yet.\n")
+        return
+    print("\n📋 Your Habit List:")
+    for i in range(len(habit_names)):
+        print(f"{i + 1}. {habit_names[i]} - {habit_status[i]}")
+    print()
+
+# Function to mark a habit as done
+def mark_done():
+    view_habits()
+    if not habit_names:
+        return
+    try:
+        index = int(input("Enter the number of the habit to mark as done: ")) - 1
+        if habit_status[index] == "Done":
+            print("This habit is already marked as done!\n")
+        else:
+            habit_status[index] = "Done"
+            print(f"Habit '{habit_names[index]}' marked as done!\n")
+    except (ValueError, IndexError):
+        print("Invalid input. Please enter a valid habit number.\n")
+
+# Function to delete a habit
+def delete_habit():
+    view_habits()
+    if not habit_names:
+        return
+    try:
+        index = int(input("Enter the number of the habit to delete: ")) - 1
+        removed = habit_names.pop(index)
+        habit_status.pop(index)
+        print(f"Habit '{removed}' deleted successfully!\n")
+    except (ValueError, IndexError):
+        print("Invalid input. Please enter a valid habit number.\n")
+
+# Function to reset all statuses
+def reset_habits():
+    for i in range(len(habit_status)):
+        habit_status[i] = "Not Done"
+    print("All habit statuses reset to 'Not Done'.\n")
+
+# Main loop
+while True:
+    print("📅 Habit Tracker Menu")
+    print("1. Add New Habit")
+    print("2. View Habits")
+    print("3. Mark Habit as Done")
+    print("4. Delete a Habit")
+    print("5. Reset All Habits")
+    print("6. Exit")
+
+    choice = input("Enter your choice (1-6): ")
+
+    if choice == '1':
+        add_habit()
+    elif choice == '2':
+        view_habits()
+    elif choice == '3':
+        mark_done()
+    elif choice == '4':
+        delete_habit()
+    elif choice == '5':
+        reset_habits()
+    elif choice == '6':
+        print("Thank you for using the Habit Tracker! 👋")
+        break
+    else:
+        print("Invalid choice. Please enter a number from 1 to 6.\n")
