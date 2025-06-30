@@ -1,0 +1,101 @@
+# Hotel Reservation System
+
+class Room:
+    def __init__(self, room_number, room_type, price_per_night):
+        self.room_number = room_number
+        self.room_type = room_type
+        self.price_per_night = price_per_night
+        self.is_booked = False
+    
+    def book_room(self):
+        if not self.is_booked:
+            self.is_booked = True
+            print(f"Room {self.room_number} has been successfully booked.")
+        else:
+            print(f"Room {self.room_number} is already booked.")
+    
+    def cancel_booking(self):
+        if self.is_booked:
+            self.is_booked = False
+            print(f"Booking for room {self.room_number} has been cancelled.")
+        else:
+            print(f"Room {self.room_number} was not booked.")
+    
+    def display_room_details(self):
+        status = "Booked" if self.is_booked else "Available"
+        print(f"Room {self.room_number}: {self.room_type} - ₹{self.price_per_night}/night ({status})")
+
+class Hotel:
+    def __init__(self, hotel_name):
+        self.hotel_name = hotel_name
+        self.rooms = []
+    
+    def add_room(self, room):
+        self.rooms.append(room)
+    
+    def display_available_rooms(self):
+        available_rooms = [room for room in self.rooms if not room.is_booked]
+        if available_rooms:
+            print("\nAvailable Rooms:")
+            for room in available_rooms:
+                room.display_room_details()
+        else:
+            print("\nNo rooms available at the moment.")
+    
+    def book_room(self, room_number):
+        for room in self.rooms:
+            if room.room_number == room_number:
+                room.book_room()
+                return
+        print(f"Room {room_number} not found.")
+    
+    def cancel_booking(self, room_number):
+        for room in self.rooms:
+            if room.room_number == room_number:
+                room.cancel_booking()
+                return
+        print(f"Room {room_number} not found.")
+    
+    def display_all_rooms(self):
+        print(f"\n{self.hotel_name} - Room Details:")
+        for room in self.rooms:
+            room.display_room_details()
+
+# Main Program
+def main():
+    hotel = Hotel("The Grand Palace")
+
+    # Adding rooms to the hotel
+    hotel.add_room(Room(101, "Single", 2000))
+    hotel.add_room(Room(102, "Double", 3000))
+    hotel.add_room(Room(103, "Suite", 5000))
+    
+    while True:
+        print("\nOptions:")
+        print("1. Display All Rooms")
+        print("2. Display Available Rooms")
+        print("3. Book a Room")
+        print("4. Cancel a Booking")
+        print("5. Exit")
+        
+        choice = input("Enter your choice (1-5): ")
+        
+        if choice == '1':
+            hotel.display_all_rooms()
+        elif choice == '2':
+            hotel.display_available_rooms()
+        elif choice == '3':
+            room_number = int(input("Enter room number to book: "))
+            hotel.book_room(room_number)
+        elif choice == '4':
+            room_number = int(input("Enter room number to cancel booking: "))
+            hotel.cancel_booking(room_number)
+        elif choice == '5':
+            print("Thank you for using the Hotel Reservation System. Goodbye!")
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+# Run the main program
+if __name__ == "__main__":
+    main()
